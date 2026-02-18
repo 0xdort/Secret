@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome Apes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --neon-teal: #7fffd4;
+      --neon-green: #a8ff3e;
+      --gold: #ffd700;
+      --bg: #000;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      overflow-x: hidden;
+      height: 100%;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 40px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--neon-teal);
+      box-shadow: 0 0 12px var(--neon-teal);
+    }
+
+    .nav-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.08em;
+      color: var(--neon-teal);
+      text-shadow: 0 0 20px var(--neon-teal), 0 0 40px rgba(127,255,212,0.4);
+      line-height: 1;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0; right: 0;
+      height: 1px;
+      background: var(--neon-teal);
+      transform: scaleX(0);
+      transition: transform 0.25s ease;
+      transform-origin: left;
+    }
+
+    .nav-links a:hover {
+      color: var(--neon-teal);
+    }
+
+    .nav-links a:hover::after {
+      transform: scaleX(1);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      min-height: 600px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    /* Background club scene */
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url('images/hero-bg.jpg');
+      background-size: cover;
+      background-position: center top;
+      /* If no background image, show a dark atmospheric gradient */
+      background-color: #0a0a0a;
+    }
+
+    /* Subtle vignette at top */
+    .hero-vignette {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.3) 0%,
+        transparent 30%,
+        transparent 60%,
+        rgba(0,0,0,0.7) 100%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ── APE STRIP ── */
+    .ape-strip {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0;
+      padding-bottom: 0;
+      /* Slight overlap into bottom of screen for drama */
+    }
+
+    .ape-slot {
+      position: relative;
+      flex: 1;
+      max-width: 220px;
+      cursor: pointer;
+      /* Static state: show first frame frozen via opacity trick */
+    }
+
+    /* We use a wrapper with two img tags:
+       - .ape-static: a static PNG (or poster frame) always visible
+       - .ape-gif: the animated GIF, hidden until hover
+       Since we only have GIFs (no static frames), we freeze the GIF at rest
+       by using the "paused GIF" trick: overlay a canvas or use object approach.
+       Simplest approach: show GIF at rest too, but JS pauses it.
+       Actually cleanest: show GIF always but use CSS animation-play-state.
+       Since GIFs can't be paused via CSS, we use the two-image technique:
+       static = gif loaded in an <img> (browsers show first frame when display:none then shown)
+       We'll use the simplest reliable method: both images stacked,
+       gif on top fades in on hover.
+    */
+
+    .ape-slot img.ape-static,
+    .ape-slot img.ape-gif {
+      display: block;
+      width: 100%;
+      height: auto;
+      /* Black bg on images blends with page bg */
+      mix-blend-mode: lighten;
+    }
+
+    .ape-slot img.ape-gif {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .ape-slot:hover img.ape-gif {
+      opacity: 1;
+    }
+
+    /* Scale up slightly on hover */
+    .ape-slot img.ape-static,
+    .ape-slot img.ape-gif {
+      transition: transform 0.3s ease, opacity 0.15s ease;
+      transform-origin: bottom center;
+    }
+
+    .ape-slot:hover img.ape-static,
+    .ape-slot:hover img.ape-gif {
+      transform: scale(1.06) translateY(-8px);
+    }
+
+    /* Glow on hover */
+    .ape-slot::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 10%; right: 10%;
+      height: 60px;
+      background: radial-gradient(ellipse at center bottom, rgba(127,255,212,0.25) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .ape-slot:hover::after {
+      opacity: 1;
+    }
+
+    /* ── PAGE INTRO LOAD ANIMATION ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    nav { animation: fadeUp 0.6s ease both; }
+
+    .ape-slot:nth-child(1) { animation: fadeUp 0.7s 0.2s ease both; }
+    .ape-slot:nth-child(2) { animation: fadeUp 0.7s 0.35s ease both; }
+    .ape-slot:nth-child(3) { animation: fadeUp 0.7s 0.5s ease both; }
+    .ape-slot:nth-child(4) { animation: fadeUp 0.7s 0.65s ease both; }
+    .ape-slot:nth-child(5) { animation: fadeUp 0.7s 0.8s ease both; }
+    .ape-slot:nth-child(6) { animation: fadeUp 0.7s 0.95s ease both; }
+
+    /* ── SECTION BELOW HERO ── */
+    .tagline-bar {
+      background: #000;
+      text-align: center;
+      padding: 48px 20px;
+      border-top: 1px solid rgba(127,255,212,0.2);
+    }
+
+    .tagline-bar h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: 0.1em;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .tagline-bar p {
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ── NAV CARDS ── */
+    .page-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: rgba(127,255,212,0.1);
+      border-top: 1px solid rgba(127,255,212,0.15);
+      border-bottom: 1px solid rgba(127,255,212,0.15);
+    }
+
+    .card {
+      background: #000;
+      padding: 48px 32px;
+      text-decoration: none;
+      display: block;
+      transition: background 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--neon-teal);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+      transform-origin: left;
+    }
+
+    .card:hover {
+      background: rgba(127,255,212,0.04);
+    }
+
+    .card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .card-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3rem;
+      color: rgba(127,255,212,0.15);
+      line-height: 1;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.08em;
+      color: #fff;
+      display: block;
+      margin-bottom: 10px;
+      transition: color 0.2s;
+    }
+
+    .card:hover .card-title {
+      color: var(--neon-teal);
+    }
+
+    .card-desc {
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .card-arrow {
+      display: inline-block;
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: var(--neon-teal);
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .card:hover .card-arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #000;
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    footer p {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.25);
+      text-transform: uppercase;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .social-links a {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .social-links a:hover {
+      color: var(--neon-teal);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .page-cards { grid-template-columns: repeat(2, 1fr); }
+      .ape-slot { max-width: 160px; }
+    }
+
+    @media (max-width: 600px) {
+      .page-cards { grid-template-columns: 1fr; }
+      .ape-strip { gap: 0; }
+      .ape-slot { max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-logo">
+      <!-- Replace src with your actual logo file -->
+      <div style="width:52px;height:52px;border-radius:50%;border:2px solid #7fffd4;box-shadow:0 0 12px #7fffd4;background:#111;display:flex;align-items:center;justify-content:center;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:#7fffd4;letter-spacing:0.05em;text-align:center;line-height:1.2;">WELCOME<br>APES</span>
+      </div>
+      <span class="nav-title">Welcome Apes</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="club-news.html">Club News</a></li>
+      <li><a href="new-members.html">New Members</a></li>
+      <li><a href="community-resources.html">Community Resources</a></li>
+      <li><a href="welcome-package.html">Welcome Package</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <!-- 
+      BACKGROUND: Place your club scene image at images/hero-bg.jpg
+      It's the wide illustration with the "WELCOME" arch sign and string lights.
+      Right-click that image on your live Wix site → Save Image As → images/hero-bg.jpg
+    -->
+    <div class="hero-bg"></div>
+    <div class="hero-vignette"></div>
+
+    <!-- APE STRIP — 6 apes across the bottom -->
+    <div class="ape-strip">
+
+      <!-- APE 1: Zombie/Mutant with cupcake -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape1.gif"
+             alt="Zombie Ape">
+        <img class="ape-gif"
+             src="images/ape1.gif"
+             alt="Zombie Ape animated">
+      </div>
+
+      <!-- APE 2: Pink hair ice cream ape -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape2.gif"
+             alt="Pink Hair Ape">
+        <img class="ape-gif"
+             src="images/ape2.gif"
+             alt="Pink Hair Ape animated">
+      </div>
+
+      <!-- APE 3: Bikini ape -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape3.gif"
+             alt="Bikini Ape">
+        <img class="ape-gif"
+             src="images/ape3.gif"
+             alt="Bikini Ape animated">
+      </div>
+
+      <!-- APE 4: Astronaut with coffee -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape4.gif"
+             alt="Astronaut Ape">
+        <img class="ape-gif"
+             src="images/ape4.gif"
+             alt="Astronaut Ape animated">
+      </div>
+
+      <!-- APE 5: Doctor/Scientist with pipe -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape5.gif"
+             alt="Doctor Ape">
+        <img class="ape-gif"
+             src="images/ape5.gif"
+             alt="Doctor Ape animated">
+      </div>
+
+      <!-- APE 6: Warrior with sword -->
+      <div class="ape-slot">
+        <img class="ape-static"
+             src="images/ape6.gif"
+             alt="Warrior Ape">
+        <img class="ape-gif"
+             src="images/ape6.gif"
+             alt="Warrior Ape animated">
+      </div>
+
+    </div>
+  </section>
+
+  <!-- TAGLINE -->
+  <div class="tagline-bar">
+    <h2>We See Ape. We Follow Ape. We Welcome Ape.</h2>
+    <p>The best club in Web3 — open to all apes</p>
+  </div>
+
+  <!-- PAGE CARDS -->
+  <div class="page-cards">
+    <a href="club-news.html" class="card">
+      <span class="card-num">01</span>
+      <span class="card-title">Club News</span>
+      <span class="card-desc">Latest updates from the community</span>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="new-members.html" class="card">
+      <span class="card-num">02</span>
+      <span class="card-title">New Members</span>
+      <span class="card-desc">Just joined? Start here</span>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="community-resources.html" class="card">
+      <span class="card-num">03</span>
+      <span class="card-title">Community Resources</span>
+      <span class="card-desc">Tools, links & essentials</span>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="welcome-package.html" class="card">
+      <span class="card-num">04</span>
+      <span class="card-title">Welcome Package</span>
+      <span class="card-desc">Everything you need to get started</span>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 Welcome Apes. All rights reserved.</p>
+    <div class="social-links">
+      <a href="https://x.com/WelcomeApes" target="_blank">Twitter / X</a>
+      <a href="#">Discord</a>
+      <a href="#">OpenSea</a>
+    </div>
+  </footer>
+
+  <script>
+    // GIF hover pause trick:
+    // At rest, we want the GIF to appear "frozen" (first frame only).
+    // We achieve this by cloning the src on mouseenter to restart/play the GIF,
+    // and on mouseleave we show the static version only.
+    // Since browsers cache GIFs and show them mid-animation,
+    // we force-restart each GIF on hover by re-setting the src.
+
+    document.querySelectorAll('.ape-slot').forEach(slot => {
+      const gif = slot.querySelector('.ape-gif');
+      const originalSrc = gif.src;
+
+      slot.addEventListener('mouseenter', () => {
+        // Force restart the GIF animation from frame 1
+        gif.src = '';
+        gif.src = originalSrc;
+      });
+    });
+  </script>
+
+</body>
+</html>
