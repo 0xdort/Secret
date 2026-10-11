@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bath Bomb Picker</title>
+<meta name="theme-color" content="#2a1f3d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #2a1f3d;
+    --bg2: #5b3f7a;
+    --card: rgba(255,255,255,0.10);
+    --card-solid: #3a2c52;
+    --ink: #fff7fb;
+    --muted: #d8c8ea;
+    --accent: #ffb3d9;
+    --accent2: #b6f0e0;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Fredoka", system-ui, sans-serif;
+    color: var(--ink);
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg1) 70%) fixed, var(--bg1);
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+  /* drifting background bubbles */
+  .bg-bubbles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .bg-bubbles span {
+    position: absolute; bottom: -60px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.5), rgba(255,255,255,.05) 60%);
+    border: 1px solid rgba(255,255,255,.15);
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    to { transform: translateY(-120vh) translateX(var(--drift)); opacity: 0; }
+  }
+
+  main { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { text-align: center; font-size: clamp(1.7rem, 6vw, 2.3rem); margin: 8px 0 2px; letter-spacing: .5px; }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 18px; }
+
+  .tabs { display: flex; gap: 6px; background: var(--card); padding: 5px; border-radius: 999px; margin-bottom: 18px; }
+  .tabs button {
+    flex: 1; border: 0; background: transparent; color: var(--muted);
+    font: 600 1rem "Fredoka", sans-serif; padding: 10px 6px; border-radius: 999px; cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .tabs button.active { background: var(--accent); color: #3a1d40; }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadein .3s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } }
+
+  /* WHEEL */
+  .wheel-wrap { position: relative; width: min(92vw, 440px); aspect-ratio: 1; margin: 0 auto; }
+  .wheel-wrap canvas { width: 100%; height: 100%; display: block; filter: drop-shadow(0 10px 30px rgba(0,0,0,.4)); }
+  .pointer {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent;
+    border-top: 34px solid #fff; filter: drop-shadow(0 3px 4px rgba(0,0,0,.4)); z-index: 2;
+  }
+  .pointer.tick { animation: tick .12s ease; }
+  @keyframes tick { 50% { transform: translateX(-50%) rotate(-14deg); } }
+  .hub {
+    position: absolute; inset: 0; margin: auto; width: 24%; height: 24%; border-radius: 50%;
+    border: 0; cursor: pointer; z-index: 2;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--accent) 70%);
+    color: #3a1d40; font: 700 clamp(.9rem, 4vw, 1.2rem) "Fredoka", sans-serif;
+    box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 -4px 8px rgba(0,0,0,.1);
+    transition: transform .15s;
+  }
+  .hub:active { transform: scale(.94); }
+  .hub:disabled { cursor: default; opacity: .85; }
+
+  /* BUBBLES */
+  .bubble-field {
+    position: relative; width: 100%; height: min(70vh, 480px);
+    border-radius: 24px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    overflow: hidden; touch-action: manipulation;
+  }
+  .bubble {
+    position: absolute; border-radius: 50%; cursor: pointer; border: 0; padding: 0;
+    background:
+      radial-gradient(circle at 30% 28%, rgba(255,255,255,.9) 0 8%, transparent 9%),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 55%, rgba(255,255,255,.35) 68%, rgba(255,255,255,.08) 72%),
+      conic-gradient(from var(--hue, 0deg), rgba(255,170,220,.35), rgba(170,230,255,.35), rgba(200,255,200,.3), rgba(255,240,170,.3), rgba(255,170,220,.35));
+    box-shadow: inset 0 0 18px rgba(255,255,255,.35), 0 6px 18px rgba(0,0,0,.2);
+    animation: float var(--dur, 6s) ease-in-out infinite alternate;
+    font-size: 1.4rem; color: rgba(255,255,255,.85);
+  }
+  .bubble:hover { filter: brightness(1.15); }
+  @keyframes float {
+    0% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(var(--dx), var(--dy)) scale(1.04); }
+    100% { transform: translate(calc(var(--dx) * -1), calc(var(--dy) * .6)) scale(.98); }
+  }
+  .bubble.pop { animation: pop .35s ease-out forwards; pointer-events: none; }
+  @keyframes pop {
+    40% { transform: scale(1.3); opacity: .9; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+  .hint { text-align: center; color: var(--muted); margin: 12px 0 0; font-size: .95rem; }
+
+  /* SHAKE / MYSTERY */
+  .orb-btn {
+    display: block; margin: 10px auto; width: min(70vw, 280px); aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer;
+    background: radial-gradient(circle at 32% 28%, #fff 0 6%, transparent 7%),
+                conic-gradient(#ffb3d9, #c7a6ff, #9fe3ff, #b6f0e0, #ffe7a3, #ffb3d9);
+    box-shadow: 0 0 40px rgba(255,179,217,.5), inset 0 -20px 40px rgba(0,0,0,.2);
+    color: #3a1d40; font: 700 1.4rem "Fredoka", sans-serif;
+    animation: breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe { 50% { transform: scale(1.04); box-shadow: 0 0 60px rgba(199,166,255,.6), inset 0 -20px 40px rgba(0,0,0,.2); } }
+  .orb-btn.shaking { animation: shake .12s linear infinite; }
+  @keyframes shake {
+    0% { transform: translate(0,0) rotate(0); } 25% { transform: translate(-6px,3px) rotate(-4deg); }
+    50% { transform: translate(5px,-4px) rotate(3deg); } 75% { transform: translate(-3px,-2px) rotate(-2deg); }
+  }
+  .orb-name { text-align: center; min-height: 2.2em; font-size: 1.3rem; font-weight: 600; margin-top: 10px; }
+
+  /* STASH */
+  .stash h2 { font-size: 1.15rem; margin: 26px 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  .stash h2 button { font: 500 .85rem "Fredoka", sans-serif; background: transparent; color: var(--muted); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .item {
+    display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 16px; padding: 10px;
+    border: 1px solid rgba(255,255,255,.06); transition: opacity .2s;
+  }
+  .item.empty { opacity: .4; }
+  .item .ball { width: 38px; height: 38px; flex: none; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .nm { font-size: .88rem; line-height: 1.15; }
+  .item .ct { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .item .ct button {
+    width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; font: 700 .95rem "Fredoka", sans-serif;
+    background: rgba(255,255,255,.15); color: var(--ink); line-height: 1;
+  }
+  .item .ct span { min-width: 1.2em; text-align: center; font-weight: 600; }
+  .history { color: var(--muted); font-size: .9rem; margin-top: 14px; line-height: 1.5; }
+
+  .ball {
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 28%, rgba(255,255,255,.75) 0 10%, transparent 30%),
+      radial-gradient(circle at 70% 75%, var(--c2) 0 35%, transparent 60%),
+      radial-gradient(circle at 25% 70%, var(--c3) 0 25%, transparent 55%),
+      var(--c1);
+    box-shadow: inset -6px -8px 14px rgba(0,0,0,.18), 0 4px 10px rgba(0,0,0,.25);
+  }
+
+  /* RESULT MODAL */
+  .modal { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(20,10,30,.65); backdrop-filter: blur(6px); }
+  .modal.show { display: flex; }
+  .result {
+    position: relative; width: 100%; max-width: 380px; text-align: center; background: var(--card-solid); border-radius: 28px;
+    padding: 28px 22px 22px; box-shadow: 0 20px 60px rgba(0,0,0,.5); animation: bounceIn .5s cubic-bezier(.2,1.6,.4,1);
+  }
+  @keyframes bounceIn { from { transform: scale(.6); opacity: 0; } }
+  .result .tonight { color: var(--muted); text-transform: uppercase; letter-spacing: 2px; font-size: .8rem; }
+  .result .ball { width: 140px; height: 140px; margin: 16px auto; animation: spinIn 1s ease; }
+  @keyframes spinIn { from { transform: rotate(-200deg) scale(.4); } }
+  .result h3 { font-size: 1.7rem; margin: 6px 0 4px; }
+  .result .vibe { color: var(--muted); margin: 0 0 18px; min-height: 1.4em; }
+  .result .left { font-size: .85rem; color: var(--muted); margin-bottom: 14px; }
+  .actions { display: flex; gap: 10px; }
+  .actions button {
+    flex: 1; border: 0; border-radius: 999px; padding: 13px 10px; cursor: pointer; font: 600 1rem "Fredoka", sans-serif;
+  }
+  .btn-primary { background: var(--accent); color: #3a1d40; }
+  .btn-ghost { background: rgba(255,255,255,.12); color: var(--ink); }
+
+  .fizz { position: fixed; pointer-events: none; z-index: 11; border-radius: 50%; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120px); z-index: 12;
+    background: var(--accent2); color: #1e3b33; padding: 10px 18px; border-radius: 999px; font-weight: 600;
+    transition: transform .3s; max-width: calc(100vw - 32px); text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .sound { position: fixed; top: 12px; right: 12px; z-index: 5; border: 0; background: var(--card); color: var(--ink); width: 40px; height: 40px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="bg-bubbles" id="bgBubbles"></div>
+<button class="sound" id="soundBtn" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+
+<main>
+  <h1>🛁 Tonight's Bath Bomb</h1>
+  <p class="sub">Let fate pick your soak ✨</p>
+
+  <div class="tabs" role="tablist">
+    <button class="active" data-tab="wheel">🎡 Spin</button>
+    <button data-tab="bubbles">🫧 Pop</button>
+    <button data-tab="orb">🔮 Shake</button>
+  </div>
+
+  <section class="panel active" id="panel-wheel">
+    <div class="wheel-wrap">
+      <div class="pointer" id="pointer"></div>
+      <canvas id="wheel" width="880" height="880"></canvas>
+      <button class="hub" id="spinBtn">SPIN</button>
+    </div>
+    <p class="hint">Tap the middle to spin</p>
+  </section>
+
+  <section class="panel" id="panel-bubbles">
+    <div class="bubble-field" id="bubbleField"></div>
+    <p class="hint">Each bubble hides a bath bomb. Pick one and pop it! <a href="#" id="reshuffle" style="color:var(--accent)">Reshuffle</a></p>
+  </section>
+
+  <section class="panel" id="panel-orb">
+    <button class="orb-btn" id="orbBtn">Shake me</button>
+    <div class="orb-name" id="orbName"></div>
+    <p class="hint">Tap the orb (or shake your phone)</p>
+  </section>
+
+  <section class="stash">
+    <h2>Our stash <button id="resetBtn">Refill all</button></h2>
+    <div class="grid" id="grid"></div>
+    <div class="history" id="history"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="result">
+    <div class="tonight">Tonight we're soaking in</div>
+    <div class="ball" id="resBall"></div>
+    <h3 id="resName"></h3>
+    <p class="vibe" id="resVibe"></p>
+    <div class="left" id="resLeft"></div>
+    <div class="actions">
+      <button class="btn-ghost" id="againBtn">Try again</button>
+      <button class="btn-primary" id="useBtn">Use it! 🛁</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- The 10 scents from the box (2 of each) ----
+const BOMBS = [
+  { id: "mint",     name: "Mint & Mugwort",          emoji: "🌿", c: ["#8fd18a", "#eef6ea", "#5fb85a"], vibe: "Fresh, cool and herbal. Big reset energy." },
+  { id: "cherry",   name: "Cherry & Fig",            emoji: "🍒", c: ["#b24f9e", "#b9d65a", "#d06bb8"], vibe: "Juicy, sweet and a little decadent." },
+  { id: "sakura",   name: "Sakura",                  emoji: "🌸", c: ["#8ccf5a", "#7fc4d8", "#b6e07a"], vibe: "Soft cherry blossom. Springtime in a tub." },
+  { id: "lavender", name: "Lavender & Honeysuckle",  emoji: "💜", c: ["#7b3f93", "#f7f3f5", "#c99a9a"], vibe: "Calm, floral, sleepy-time bliss." },
+  { id: "sandal",   name: "Sandalwood & Cardamom",   emoji: "🪵", c: ["#f39a2a", "#f7b54a", "#e58320"], vibe: "Warm, woody and cozy. Candlelight vibes." },
+  { id: "rose",     name: "Rose",                    emoji: "🌹", c: ["#a8475a", "#7fa9c4", "#d07a86"], vibe: "Classic and romantic. Treat yourselves." },
+  { id: "violet",   name: "Violet & Tuberose",       emoji: "🪻", c: ["#f5f3ec", "#4fb59a", "#6f86d6"], vibe: "Dreamy, powdery and floral." },
+  { id: "orange",   name: "Orange Blossom & Pear",   emoji: "🍐", c: ["#f6a43a", "#f39a8a", "#f2c04a"], vibe: "Bright, fruity and sunny." },
+  { id: "grape",    name: "Grapefruit",              emoji: "🍊", c: ["#f19a35", "#b7e3b5", "#f2b35a"], vibe: "Zingy citrus. Wakes the senses right up." },
+  { id: "lemon",    name: "Lemon & Rosemary",        emoji: "🍋", c: ["#f4a23a", "#f7c34c", "#e8902a"], vibe: "Zesty and herby. Clean and uplifting." },
+];
+const STORE_KEY = "bathbomb-picker-v1";
+
+// ---- State ----
+let state = { counts: {}, history: [], sound: true };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  if (saved) state = Object.assign(state, saved);
+} catch (e) {}
+BOMBS.forEach(b => { if (typeof state.counts[b.id] !== "number") state.counts[b.id] = 2; });
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+const byId = id => BOMBS.find(b => b.id === id);
+const available = () => {
+  const list = BOMBS.filter(b => state.counts[b.id] > 0);
+  return list.length ? list : BOMBS; // if everything's used up, allow any
+};
+const ballStyle = b => `--c1:${b.c[0]};--c2:${b.c[1]};--c3:${b.c[2]}`;
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+
+// ---- Sound (tiny WebAudio blips, no files) ----
+let actx;
+function tone(freq, dur = 0.06, type = "sine", vol = 0.15, slide) {
+  if (!state.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, actx.currentTime + dur);
+    g.gain.setValueAtTime(vol, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+const tick = () => tone(900 + Math.random() * 200, 0.03, "triangle", 0.08);
+const popSound = () => { tone(500, 0.12, "sine", 0.25, 1400); setTimeout(() => tone(1800, 0.05, "triangle", 0.08), 40); };
+const tada = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.25, "triangle", 0.12), i * 110));
+const soundBtn = document.getElementById("soundBtn");
+function renderSoundBtn() { soundBtn.textContent = state.sound ? "🔊" : "🔇"; }
+soundBtn.onclick = () => { state.sound = !state.sound; save(); renderSoundBtn(); };
+renderSoundBtn();
+
+// ---- Background bubbles ----
+const bg = document.getElementById("bgBubbles");
+for (let i = 0; i < 18; i++) {
+  const s = document.createElement("span");
+  const size = 10 + Math.random() * 50;
+  s.style.cssText = `width:${size}px;height:${size}px;left:${Math.random() * 100}%;animation-duration:${10 + Math.random() * 14}s;animation-delay:${-Math.random() * 20}s;--drift:${(Math.random() - .5) * 120}px`;
+  bg.appendChild(s);
+}
+
+// ---- Tabs ----
+document.querySelectorAll(".tabs button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + btn.dataset.tab));
+    if (btn.dataset.tab === "bubbles") makeBubbles();
+  };
+});
+
+// ---- Wheel ----
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const pointer = document.getElementById("pointer");
+let wheelAngle = 0, spinning = false, wheelItems = [];
+
+function drawWheel() {
+  wheelItems = available();
+  const n = wheelItems.length, W = canvas.width, R = W / 2 - 8, cx = W / 2, cy = W / 2;
+  const seg = (Math.PI * 2) / n;
+  ctx.clearRect(0, 0, W, W);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(wheelAngle);
+  wheelItems.forEach((b, i) => {
+    const a0 = i * seg - Math.PI / 2, a1 = a0 + seg, mid = a0 + seg / 2;
+    const grd = ctx.createRadialGradient(Math.cos(mid) * R * .6, Math.sin(mid) * R * .6, 10, 0, 0, R);
+    grd.addColorStop(0, b.c[1]); grd.addColorStop(.55, b.c[0]); grd.addColorStop(1, b.c[2]);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath();
+    ctx.fillStyle = grd; ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 4; ctx.stroke();
+
+    ctx.save();
+    ctx.rotate(mid);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.font = `${n > 6 ? 46 : 58}px serif`;
+    ctx.fillText(b.emoji, R - 18, 0);
+    ctx.font = `600 ${n > 8 ? 26 : 30}px Fredoka, sans-serif`;
+    ctx.fillStyle = "#2b1633";
+    ctx.shadowColor = "rgba(255,255,255,.8)"; ctx.shadowBlur = 6;
+    const label = b.name.length > 14 ? b.name.split(" & ")[0] : b.name;
+    ctx.fillText(label, R - 82, 0);
+    ctx.restore();
+  });
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.lineWidth = 12; ctx.strokeStyle = "#fff"; ctx.stroke();
+}
+
+function indexAtPointer() {
+  const n = wheelItems.length, seg = (Math.PI * 2) / n;
+  const a = ((-wheelAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  return Math.floor(a / seg) % n;
+}
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+  const spinBtn = document.getElementById("spinBtn");
+  spinBtn.disabled = true; spinBtn.textContent = "🌀";
+  const start = wheelAngle;
+  const total = Math.PI * 2 * (5 + Math.random() * 3) + Math.random() * Math.PI * 2;
+  const dur = 4200 + Math.random() * 1200;
+  const t0 = performance.now();
+  let lastIdx = indexAtPointer();
+  const ease = t => 1 - Math.pow(1 - t, 4);
+  function frame(now) {
+    const t = Math.min(1, (now - t0) / dur);
+    wheelAngle = start + total * ease(t);
+    drawWheel();
+    const idx = indexAtPointer();
+    if (idx !== lastIdx) {
+      lastIdx = idx; tick();
+      pointer.classList.remove("tick"); void pointer.offsetWidth; pointer.classList.add("tick");
+    }
+    if (t < 1) requestAnimationFrame(frame);
+    else {
+      spinning = false; spinBtn.disabled = false; spinBtn.textContent = "SPIN";
+      showResult(wheelItems[idx]);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+document.getElementById("spinBtn").onclick = spin;
+
+// ---- Bubbles ----
+const field = document.getElementById("bubbleField");
+function makeBubbles() {
+  field.innerHTML = "";
+  const pool = available().slice().sort(() => Math.random() - .5);
+  const W = field.clientWidth || 360, H = field.clientHeight || 420;
+  const cols = W < 420 ? 3 : 4, rows = Math.ceil(pool.length / cols);
+  const cellW = W / cols, cellH = H / rows;
+  pool.forEach((b, i) => {
+    const size = Math.min(cellW, cellH) * (0.7 + Math.random() * 0.2);
+    const col = i % cols, row = Math.floor(i / cols);
+    const el = document.createElement("button");
+    el.className = "bubble";
+    el.setAttribute("aria-label", "Mystery bubble");
+    el.textContent = "?";
+    el.style.cssText = `width:${size}px;height:${size}px;left:${col * cellW + (cellW - size) / 2}px;top:${row * cellH + (cellH - size) / 2}px;` +
+      `--dx:${(Math.random() - .5) * 18}px;--dy:${(Math.random() - .5) * 18}px;--dur:${4 + Math.random() * 4}s;--hue:${Math.random() * 360}deg;animation-delay:${-Math.random() * 5}s`;
+    el.onclick = e => {
+      el.classList.add("pop"); popSound();
+      const r = el.getBoundingClientRect();
+      burst(r.left + r.width / 2, r.top + r.height / 2, b.c, 18);
+      setTimeout(() => showResult(b), 380);
+    };
+    field.appendChild(el);
+  });
+}
+document.getElementById("reshuffle").onclick = e => { e.preventDefault(); makeBubbles(); tone(600, .15, "sine", .1, 1200); };
+
+// ---- Shake orb ----
+const orbBtn = document.getElementById("orbBtn"), orbName = document.getElementById("orbName");
+let shaking = false;
+function shakeOrb() {
+  if (shaking) return;
+  shaking = true;
+  orbBtn.classList.add("shaking");
+  const pool = available();
+  let i = 0, delay = 60;
+  const final = rand(pool);
+  (function roll() {
+    const b = pool[i++ % pool.length];
+    orbName.textContent = b.emoji + " " + b.name;
+    tick();
+    delay *= 1.12;
+    if (delay < 420) setTimeout(roll, delay);
+    else {
+      orbName.textContent = final.emoji + " " + final.name;
+      orbBtn.classList.remove("shaking"); shaking = false;
+      setTimeout(() => showResult(final), 300);
+    }
+  })();
+}
+orbBtn.onclick = shakeOrb;
+let lastShake = 0;
+window.addEventListener("devicemotion", e => {
+  const a = e.accelerationIncludingGravity; if (!a) return;
+  const mag = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
+  if (mag > 35 && Date.now() - lastShake > 2500 && document.getElementById("panel-orb").classList.contains("active")) {
+    lastShake = Date.now(); shakeOrb();
+  }
+});
+orbBtn.addEventListener("click", () => {
+  // iOS needs permission for motion events
+  if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
+    DeviceMotionEvent.requestPermission().catch(() => {});
+  }
+}, { once: true });
+
+// ---- Fizz particles ----
+function burst(x, y, colors, n = 30) {
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("div");
+    p.className = "fizz";
+    const s = 6 + Math.random() * 14;
+    p.style.cssText = `width:${s}px;height:${s}px;left:${x}px;top:${y}px;background:${rand(colors)};opacity:.95;box-shadow:inset -2px -2px 4px rgba(0,0,0,.15)`;
+    document.body.appendChild(p);
+    const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 160;
+    p.animate([
+      { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist - 80}px)) scale(.2)`, opacity: 0 }
+    ], { duration: 900 + Math.random() * 700, easing: "cubic-bezier(.2,.8,.3,1)" }).onfinish = () => p.remove();
+  }
+}
+
+// ---- Result ----
+const modal = document.getElementById("modal");
+let current = null;
+function showResult(b) {
+  current = b;
+  document.getElementById("resBall").style.cssText = ballStyle(b);
+  document.getElementById("resName").textContent = b.emoji + " " + b.name;
+  document.getElementById("resVibe").textContent = b.vibe;
+  const left = state.counts[b.id];
+  document.getElementById("resLeft").textContent = left > 0 ? `${left} left in the stash` : "None left, but the heart wants what it wants";
+  modal.classList.add("show");
+  tada();
+  setTimeout(() => burst(innerWidth / 2, innerHeight / 2 - 40, b.c, 50), 200);
+}
+function closeModal() { modal.classList.remove("show"); }
+document.getElementById("againBtn").onclick = () => {
+  closeModal();
+  const tab = document.querySelector(".tabs .active").dataset.tab;
+  if (tab === "wheel") setTimeout(spin, 200);
+  else if (tab === "bubbles") makeBubbles();
+  else setTimeout(shakeOrb, 200);
+};
+document.getElementById("useBtn").onclick = () => {
+  if (state.counts[current.id] > 0) state.counts[current.id]--;
+  state.history.unshift({ id: current.id, at: Date.now() });
+  state.history = state.history.slice(0, 20);
+  save(); closeModal(); renderAll();
+  toast(`Enjoy your ${current.name} soak! 🛁✨`);
+};
+modal.onclick = e => { if (e.target === modal) closeModal(); };
+
+// ---- Stash grid ----
+const grid = document.getElementById("grid");
+function renderGrid() {
+  grid.innerHTML = "";
+  BOMBS.forEach(b => {
+    const n = state.counts[b.id];
+    const el = document.createElement("div");
+    el.className = "item" + (n === 0 ? " empty" : "");
+    el.innerHTML = `<div class="ball" style="${ballStyle(b)}"></div>
+      <div class="info"><div class="nm">${b.emoji} ${b.name}</div>
+      <div class="ct"><button data-d="-1" aria-label="Remove one">−</button><span>${n}</span><button data-d="1" aria-label="Add one">+</button></div></div>`;
+    el.querySelectorAll("button").forEach(btn => btn.onclick = () => {
+      state.counts[b.id] = Math.max(0, Math.min(9, state.counts[b.id] + Number(btn.dataset.d)));
+      save(); renderAll();
+    });
+    grid.appendChild(el);
+  });
+  const total = BOMBS.reduce((s, b) => s + state.counts[b.id], 0);
+  document.querySelector(".stash h2").firstChild.textContent = `Our stash (${total} left) `;
+}
+function renderHistory() {
+  const h = document.getElementById("history");
+  if (!state.history.length) { h.textContent = ""; return; }
+  h.innerHTML = "<strong>Recent soaks:</strong> " + state.history.slice(0, 6).map(x => {
+    const b = byId(x.id); if (!b) return "";
+    const d = new Date(x.at);
+    return `${b.emoji} ${b.name} <small>(${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</small>`;
+  }).join(" · ");
+}
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("Refill the stash back to 2 of each?")) return;
+  BOMBS.forEach(b => state.counts[b.id] = 2);
+  save(); renderAll(); toast("Stash refilled! 🎁");
+};
+
+function renderAll() {
+  renderGrid(); renderHistory();
+  if (!spinning) drawWheel();
+  if (document.getElementById("panel-bubbles").classList.contains("active")) makeBubbles();
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+renderAll();
+document.fonts && document.fonts.ready.then(() => drawWheel());
+</script>
+</body>
+</html>
